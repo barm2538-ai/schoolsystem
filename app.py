@@ -1,3 +1,35 @@
+# --- เริ่มส่วนทดสอบ Google Sheets ---
+import streamlit as st
+import gspread
+from google.oauth2.service_account import Credentials
+
+try:
+    # 1. ดึงกุญแจจาก Secrets (ต้องตั้งชื่อหัวข้อใน Secrets ว่า [gsheets])
+    secrets = st.secrets["gsheets"]
+
+    # 2. ตั้งค่าการยืนยันตัวตน
+    scopes = [
+        "https://www.googleapis.com/auth/spreadsheets",
+        "https://www.googleapis.com/auth/drive"
+    ]
+    creds = Credentials.from_service_account_info(secrets, scopes=scopes)
+    client = gspread.authorize(creds)
+
+    # 3. ลองเปิดไฟล์ Google Sheets ชื่อ "SchoolData"
+    # (ต้องมั่นใจว่าคุณสร้างไฟล์ชื่อ SchoolData และแชร์ให้เมลบอทแล้ว)
+    sheet = client.open("SchoolData")
+    
+    # 4. ถ้าผ่าน จะแสดงข้อความสีเขียวใหญ่ๆ
+    st.success(f"🎉 เยี่ยมมาก! เชื่อมต่อ Google Sheets สำเร็จ: พบไฟล์ '{sheet.title}'")
+    
+except Exception as e:
+    # ถ้าพัง จะบอกว่าพังตรงไหน
+    st.error(f"❌ เชื่อมต่อไม่ได้: {e}")
+    st.stop() # หยุดการทำงานตรงนี้ ไม่รันส่วนล่างต่อ
+
+# --- จบส่วนทดสอบ ---
+
+# ... (ข้างล่างนี้คือโค้ดเดิมของคุณ import streamlit ... )
 import streamlit as st
 import pandas as pd
 from dbfread import DBF
@@ -1490,4 +1522,5 @@ if not st.session_state.logged_in: login_page()
 else:
     if st.session_state.role == 'admin': admin_page()
     elif st.session_state.role == 'teacher': teacher_page()
+
     else: view_data_page(st.session_state.user)
