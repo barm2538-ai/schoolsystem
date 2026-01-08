@@ -1,35 +1,52 @@
-# --- เริ่มส่วนทดสอบ Google Sheets ---
 import streamlit as st
+import pandas as pd
 import gspread
 from google.oauth2.service_account import Credentials
+import datetime
 
-try:
-    # 1. ดึงกุญแจจาก Secrets (ต้องตั้งชื่อหัวข้อใน Secrets ว่า [gsheets])
-    secrets = st.secrets["gsheets"]
+# --- 1. ฟังก์ชันเชื่อมต่อฐานข้อมูล (เปลี่ยนจาก SQL เป็น Sheets) ---
+# ใช้ @st.cache_resource เพื่อให้เชื่อมต่อแค่ครั้งเดียว ไม่ต้องต่อใหม่ทุกครั้งที่กดปุ่ม
+@st.cache_resource
+def get_db_connection():
+    try:
+        # ดึง Secrets
+        secrets = st.secrets["gsheets"]
+        scopes = [
+            "https://www.googleapis.com/auth/spreadsheets",
+            "https://www.googleapis.com/auth/drive"
+        ]
+        creds = Credentials.from_service_account_info(secrets, scopes=scopes)
+        client = gspread.authorize(creds)
+        
+        # เปิดไฟล์
+        sh = client.open("SchoolData")
+        return sh
+    except Exception as e:
+        st.error(f"❌ เชื่อมต่อฐานข้อมูลไม่ได้: {e}")
+        return None
 
-    # 2. ตั้งค่าการยืนยันตัวตน
-    scopes = [
-        "https://www.googleapis.com/auth/spreadsheets",
-        "https://www.googleapis.com/auth/drive"
-    ]
-    creds = Credentials.from_service_account_info(secrets, scopes=scopes)
-    client = gspread.authorize(creds)
+# สร้างตัวแปร sh ไว้ใช้งานทั่วโปรแกรม
+sh = get_db_connection()
 
-    # 3. ลองเปิดไฟล์ Google Sheets ชื่อ "SchoolData"
-    # (ต้องมั่นใจว่าคุณสร้างไฟล์ชื่อ SchoolData และแชร์ให้เมลบอทแล้ว)
-    sheet = client.open("SchoolData")
-    
-    # 4. ถ้าผ่าน จะแสดงข้อความสีเขียวใหญ่ๆ
-    st.success(f"🎉 เยี่ยมมาก! เชื่อมต่อ Google Sheets สำเร็จ: พบไฟล์ '{sheet.title}'")
-    
-except Exception as e:
-    # ถ้าพัง จะบอกว่าพังตรงไหน
-    st.error(f"❌ เชื่อมต่อไม่ได้: {e}")
-    st.stop() # หยุดการทำงานตรงนี้ ไม่รันส่วนล่างต่อ
+# --- 2. ฟังก์ชันช่วยดึงข้อมูล (เหมือน SELECT * FROM table) ---
+def get_data(sheet_name):
+    if sh:
+        worksheet = sh.worksheet(sheet_name)
+        data = worksheet.get_all_records()
+        return pd.DataFrame(data)
+    return pd.DataFrame()
 
-# --- จบส่วนทดสอบ ---
+# --- 3. ฟังก์ชันช่วยเพิ่มข้อมูล (เหมือน INSERT INTO table) ---
+def add_data(sheet_name, row_data):
+    if sh:
+        worksheet = sh.worksheet(sheet_name)
+        worksheet.append_row(row_data)
+        return True
+    return False
 
-# ... (ข้างล่างนี้คือโค้ดเดิมของคุณ import streamlit ... )
+# ... (ส่วนล่างคือโค้ดหน้าเว็บของคุณ) ...
+
+
 import streamlit as st
 import pandas as pd
 from dbfread import DBF
@@ -1524,3 +1541,4 @@ else:
     elif st.session_state.role == 'teacher': teacher_page()
 
     else: view_data_page(st.session_state.user)
+
