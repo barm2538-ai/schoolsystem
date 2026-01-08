@@ -4,3 +4,5 @@ openpyxl
 streamlit-option-menu
 matplotlib
 dbfread
+gspread
+google-auth
